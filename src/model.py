@@ -68,7 +68,7 @@ def generateImages():
         generateImageDigital(str(i))
 
 #数据导入|标准化
-batch_size = 32
+batch_size = 16
 batch_size_detect = 32
 height = 40
 width =120
@@ -188,7 +188,7 @@ class Model2(nn.Module):
     def __init__(self, num_classes=8):
         super(Model2, self).__init__()
         # 特征提取部分（卷积层和池化层）
-        self.features = models.resnet50()
+        self.features = models.resnet50(pretrained=True)
         """改成单通道"""
         self.features.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
         # 分类器部分（全连接层）
@@ -217,7 +217,7 @@ if os.path.exists("./model/model2.pth"):
 
 #训练优化
 lossModel2 = nn.MSELoss()
-optimizerModel2 = optim.Adam(net2.parameters(),lr = 0.000001)
+optimizerModel2 = optim.Adam(net2.parameters(),lr = 0.0001)
 
 lossModel1 = nn.MSELoss()
 optimizerModel1 = optim.Adam(net1.parameters(),lr = 0.0001)
@@ -320,7 +320,7 @@ def saveAllModel():
     torch.save(net2,"./model/model2All.pth")
 
 if __name__ == "__main__":
-    trainCutModel()
+    generateImages()
     
 
 
