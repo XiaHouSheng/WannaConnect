@@ -39,22 +39,23 @@ def splicingDataImage(images:list,name = "") -> dict:
     print("Save {} Success!".format(finalName))
 
 #字体生成非手写
-def generateImageDigital(name = ""):
+def generateImageDigital(name = "",num = 0):
+    num_numbers = 4  
     points = []
-    labels = [str(random.randint(0,9)) for i in range(4)]
+    labels = [str(num)] + [str(random.randint(0,9)) for i in range(num_numbers - 1)]
     label = "".join(labels)
     image = Image.new("L",(120,40),255)
     canvans = ImageDraw.Draw(image)
     font = ImageFont.truetype("./font/font.otf", 20)
     gaussian_noise = np.random.normal(0,25,(40,120))
-    for i in range(4):
-        pasteX = 30 * i + random.randint(2,20)
+    for i in range(num_numbers):
+        pasteX = random.randint(0,100)
         pasteY = random.randint(0,20)
         points.append([str(pasteX+3),str(pasteY+10)])
         canvans.text((pasteX,pasteY),str(labels[i]),0,font = font)
         #canvans.point((pasteX+3,pasteY+10),256)
-    image = image + gaussian_noise
-    image = Image.fromarray(image).convert("L")
+    #image = image + gaussian_noise
+    #image = Image.fromarray(image).convert("L")
     part_points = ",".join(["{0}#{1}".format(i[0],i[1]) for i in points])
     #training_123|123,123|123,123|123,123|123_4170.png
     finalName = "_".join(["training",name,part_points,label]) + ".png"
@@ -64,8 +65,9 @@ def generateImageDigital(name = ""):
     
 """生成样本"""
 def generateImages():
-    for i in range(999,6001):
-        generateImageDigital(str(i))
+    for num in range(10):
+        for i in range(10):
+            generateImageDigital(str(i),num)
 
 #数据导入|标准化
 batch_size = 16
@@ -76,7 +78,7 @@ path_log = "./logs/"
 
 myTransform = transforms.Compose([
     transforms.ToTensor(),
-    transforms.Normalize((0.9019,),(0.2204,))
+    transforms.Normalize((0.9842,),(0.1181,))
 ])
 
 myDetectTransform = transforms.Compose([
@@ -143,7 +145,7 @@ def getMeanAStd():
     std = torch.sqrt(squared_sum / total_pixels - mean**2)
     print("mean",mean,"std",std)
 
-# mean 0.9019 std 0.2204 分割模型
+# mean 0.9842 std 0.1181 分割模型
 # mean 0.1337 std 0.3021 识别模型
    
 #模型
@@ -185,7 +187,7 @@ class Model1(nn.Module):
 
 """位置分辨""" #ResNet50
 class Model2(nn.Module):
-    def __init__(self, num_classes=8):
+    def __init__(self, num_classes=2):
         super(Model2, self).__init__()
         # 特征提取部分（卷积层和池化层）
         self.features = models.resnet50(pretrained=True)
@@ -217,7 +219,7 @@ if os.path.exists("./model/model2.pth"):
 
 #训练优化
 lossModel2 = nn.MSELoss()
-optimizerModel2 = optim.Adam(net2.parameters(),lr = 0.0001)
+optimizerModel2 = optim.Adam(net2.parameters(),lr = 0.0000001)
 
 lossModel1 = nn.MSELoss()
 optimizerModel1 = optim.Adam(net1.parameters(),lr = 0.0001)
@@ -257,20 +259,21 @@ def testCutModel(show = False):
             image = Image.open("./data/final_train/{}".format(name[0])).convert("RGB")
             positions = [[int(a) for a in i.split("#")] for i in name[0].split("_")[2].split(",")]
             canvas = ImageDraw.Draw(image)
-            x1,y1,x2,y2,x3,y3,x4,y4 = tuple([int(i) for i in list(net2(images)[0])])
+            outputs = net2(images)
+            x1,y1 = tuple([int(i) for i in list(outputs[0])])
             canvas.point((x1,y1),(0,256,0))
-            canvas.point((x2,y2),(0,256,0))
-            canvas.point((x3,y3),(0,256,0))
-            canvas.point((x4,y4),(0,256,0))
+            #canvas.point((x2,y2),(0,256,0))
+            #canvas.point((x3,y3),(0,256,0))
+            #canvas.point((x4,y4),(0,256,0))
             canvas.rectangle([(x1 - 10, y1 - 10), (x1 + 10, y1 + 10)], width = 1, outline = (0, 256, 0))
-            canvas.rectangle([(x2 - 10, y2 - 10), (x2 + 10, y2 + 10)], width = 1, outline = (0, 256, 0))
-            canvas.rectangle([(x3 - 10, y3 - 10), (x3 + 10, y3 + 10)], width = 1, outline = (0, 256, 0))
-            canvas.rectangle([(x4 - 10, y4 - 10), (x4 + 10, y4 + 10)], width = 1, outline = (0, 256, 0))
-            x1,y1,x2,y2,x3,y3,x4,y4 = tuple([element for a in positions for element in a])
+            #canvas.rectangle([(x2 - 10, y2 - 10), (x2 + 10, y2 + 10)], width = 1, outline = (0, 256, 0))
+            #canvas.rectangle([(x3 - 10, y3 - 10), (x3 + 10, y3 + 10)], width = 1, outline = (0, 256, 0))
+            #canvas.rectangle([(x4 - 10, y4 - 10), (x4 + 10, y4 + 10)], width = 1, outline = (0, 256, 0))
+            x1,y1 = tuple([element for a in positions for element in a])
             canvas.rectangle([(x1 - 10, y1 - 10), (x1 + 10, y1 + 10)], width = 1, outline = (256, 0, 0))
-            canvas.rectangle([(x2 - 10, y2 - 10), (x2 + 10, y2 + 10)], width = 1, outline = (256, 0, 0))
-            canvas.rectangle([(x3 - 10, y3 - 10), (x3 + 10, y3 + 10)], width = 1, outline = (256, 0, 0))
-            canvas.rectangle([(x4 - 10, y4 - 10), (x4 + 10, y4 + 10)], width = 1, outline = (256, 0, 0))
+            #canvas.rectangle([(x2 - 10, y2 - 10), (x2 + 10, y2 + 10)], width = 1, outline = (256, 0, 0))
+            #canvas.rectangle([(x3 - 10, y3 - 10), (x3 + 10, y3 + 10)], width = 1, outline = (256, 0, 0))
+            #canvas.rectangle([(x4 - 10, y4 - 10), (x4 + 10, y4 + 10)], width = 1, outline = (256, 0, 0))
             if show:
                 image.show()
             return image
@@ -320,7 +323,7 @@ def saveAllModel():
     torch.save(net2,"./model/model2All.pth")
 
 if __name__ == "__main__":
-    generateImages()
+    testBatchCutModel()
     
 
 
